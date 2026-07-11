@@ -22,6 +22,56 @@ def prep_level_for_score(score: int) -> str:
     return "bronze"
 
 
+def _coerce_action_buttons(raw_buttons: Any, fallback_buttons: list[dict[str, str]]) -> list[ActionButton]:
+    if not isinstance(raw_buttons, list):
+        raw_buttons = fallback_buttons
+
+    buttons: list[ActionButton] = []
+    for index, button in enumerate(raw_buttons[:4]):
+        if isinstance(button, dict):
+            label = str(button.get("label") or button.get("text") or button.get("title") or f"Action {index + 1}")
+            endpoint = str(button.get("endpoint") or button.get("url") or button.get("action") or "/chat")
+            icon = str(button.get("icon") or "zap")
+        else:
+            label = str(button)
+            lowered = label.lower()
+            if "checklist" in lowered:
+                endpoint, icon = "/checklist", "list"
+            elif "map" in lowered or "shelter" in lowered or "alert" in lowered:
+                endpoint, icon = "/alerts", "map"
+            elif "id" in lowered or "document" in lowered:
+                endpoint, icon = "/emergency-id", "id-card"
+            else:
+                endpoint, icon = "/chat", "zap"
+        buttons.append(ActionButton(label=label[:80], endpoint=endpoint, icon=icon))
+
+    return buttons or [ActionButton(**button) for button in fallback_buttons]
+
+
+def _coerce_alerts(raw_alerts: Any) -> list[AlertSummary]:
+    if not isinstance(raw_alerts, list):
+        return []
+
+    alerts: list[AlertSummary] = []
+    for alert in raw_alerts[:3]:
+        if isinstance(alert, dict):
+            alert_type = str(alert.get("type") or "info")
+            text = str(alert.get("text") or alert.get("message") or alert.get("title") or "")
+        else:
+            alert_type = "info"
+            text = str(alert)
+        if text:
+            alerts.append(AlertSummary(type=alert_type, text=text[:240]))
+    return alerts
+
+
+def _coerce_confidence(value: Any, fallback: float) -> float:
+    try:
+        return max(0.0, min(1.0, float(value)))
+    except (TypeError, ValueError):
+        return fallback
+
+
 class OpenAIService:
     def __init__(self) -> None:
         self.settings = get_settings()
@@ -100,10 +150,10 @@ class OpenAIService:
         )
         return ChatResponse(
             text=str(data.get("text", fallback["text"])),
-            action_buttons=[ActionButton(**button) for button in data.get("action_buttons", fallback["action_buttons"])[:4]],
-            docs_to_link=[str(link) for link in data.get("docs_to_link", [])[:5]],
-            alerts=[AlertSummary(**alert) for alert in data.get("alerts", [])[:3]],
-            confidence=float(data.get("confidence", fallback["confidence"])),
+            action_buttons=_coerce_action_buttons(data.get("action_buttons"), fallback["action_buttons"]),
+            docs_to_link=[str(link) for link in data.get("docs_to_link", [])[:5]] if isinstance(data.get("docs_to_link", []), list) else [],
+            alerts=_coerce_alerts(data.get("alerts", [])),
+            confidence=_coerce_confidence(data.get("confidence"), fallback["confidence"]),
         )
 
     async def recovery_report(self, payload: dict[str, Any], report_id: str, pdf_path: str) -> RecoveryReportResponse:
