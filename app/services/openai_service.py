@@ -11,7 +11,8 @@ from app.models.schemas import ActionButton, AlertSummary, ChatResponse, Profile
 
 SYSTEM_PROMPT = """You are a practical monsoon preparedness assistant for Indian households.
 Return concise, readable JSON only. Avoid markdown tables, decorative symbols, fear-based language, and medical/legal certainty.
-Every answer must include user context when available, 2-4 specific next steps, and accessibility-aware guidance for children, elders, disabled people, pets, and low-connectivity situations when relevant."""
+Every answer must include user context when available, 2-4 specific next steps, and accessibility-aware guidance for children, elders, disabled people, pets, and low-connectivity situations when relevant.
+If the user context includes response_language or language_name, write response text, action button labels, and alert text in that language."""
 
 
 def prep_level_for_score(score: int) -> str:
@@ -130,6 +131,11 @@ class OpenAIService:
         )
 
     async def chat(self, message: str, context: dict[str, Any]) -> ChatResponse:
+        response_language = (
+            context.get("response_language")
+            or context.get("user_profile", {}).get("language_name")
+            or "English"
+        )
         fallback = {
             "text": "Start with the safest basics: move documents and medicines into waterproof bags, charge phones and power banks, store drinking water, and decide where your household will go if water rises.",
             "action_buttons": [
@@ -144,7 +150,7 @@ class OpenAIService:
         data = await self._json_completion(
             [
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": f"Answer this monsoon preparedness question as JSON with text, action_buttons, docs_to_link, alerts, confidence. Context: {json.dumps(context)} Question: {message}"},
+                {"role": "user", "content": f"Answer this monsoon preparedness question in {response_language} as JSON with text, action_buttons, docs_to_link, alerts, confidence. Context: {json.dumps(context)} Question: {message}"},
             ],
             fallback,
         )
