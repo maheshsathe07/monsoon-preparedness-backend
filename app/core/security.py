@@ -1,21 +1,40 @@
+import base64
+import hashlib
+import hmac
+import os
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import jwt
-from passlib.context import CryptContext
 
 from app.core.config import get_settings
 
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+PBKDF2_ITERATIONS = 210_000
+HASH_NAME = "sha256"
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    salt = os.urandom(16)
+    digest = hashlib.pbkdf2_hmac(HASH_NAME, password.encode("utf-8"), salt, PBKDF2_ITERATIONS)
+    return "pbkdf2_sha256${iterations}${salt}${digest}".format(
+        iterations=PBKDF2_ITERATIONS,
+        salt=base64.urlsafe_b64encode(salt).decode("ascii"),
+        digest=base64.urlsafe_b64encode(digest).decode("ascii"),
+    )
 
 
 def verify_password(password: str, password_hash: str) -> bool:
-    return pwd_context.verify(password, password_hash)
+    try:
+        scheme, iterations, salt, expected = password_hash.split("$", 3)
+        if scheme != "pbkdf2_sha256":
+            return False
+        salt_bytes = base64.urlsafe_b64decode(salt.encode("ascii"))
+        expected_bytes = base64.urlsafe_b64decode(expected.encode("ascii"))
+        actual = hashlib.pbkdf2_hmac(HASH_NAME, password.encode("utf-8"), salt_bytes, int(iterations))
+        return hmac.compare_digest(actual, expected_bytes)
+    except (ValueError, TypeError):
+        return False
 
 
 def create_access_token(subject: str, extra_claims: dict | None = None) -> str:

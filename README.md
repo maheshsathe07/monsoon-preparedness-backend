@@ -19,7 +19,7 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 copy .env.template .env
-uvicorn app.main:app --reload --port 8000
+uvicorn main:app --reload --port 8000
 ```
 
 API docs: `http://localhost:8000/docs`
@@ -56,7 +56,7 @@ cd backend
 vercel
 ```
 
-The Vercel entrypoint is `api/index.py`.
+The Vercel entrypoint is `api/index.py`. Local development can use either `uvicorn main:app --reload --port 8000` or `uvicorn app.main:app --reload --port 8000`.
 
 ## Frontend contract
 
