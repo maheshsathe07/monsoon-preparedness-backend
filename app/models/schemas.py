@@ -23,6 +23,12 @@ class SignupRequest(BaseModel):
     location: Location | None = None
 
 
+class LoginRequest(BaseModel):
+    email: EmailStr | None = None
+    phone: str | None = Field(default=None, min_length=7, max_length=20)
+    password: str = Field(min_length=8, max_length=128)
+
+
 class AuthResponse(BaseModel):
     user_id: str
     access_token: str

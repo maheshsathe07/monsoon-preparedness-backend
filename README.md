@@ -69,6 +69,8 @@ The Vercel entrypoint is `api/index.py`. Local development can use either `uvico
 All user-facing endpoints are mounted under `/api/v1`, for example:
 
 - `POST /api/v1/profile`
+- `POST /api/v1/auth/signup`
+- `POST /api/v1/auth/login`
 - `POST /api/v1/chat`
 - `GET /api/v1/checklist/{user_id}`
 - `GET /api/v1/weather/{lat}/{lng}`
