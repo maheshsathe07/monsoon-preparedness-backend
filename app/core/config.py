@@ -1,3 +1,4 @@
+import json
 from functools import lru_cache
 from pathlib import Path
 
@@ -9,7 +10,12 @@ class Settings(BaseSettings):
     app_name: str = "Monsoon Preparedness API"
     app_env: str = "development"
     api_v1_prefix: str = "/api/v1"
-    backend_cors_origins: str = "http://localhost:3000,http://localhost:5173"
+    backend_cors_origins: str = (
+        "http://localhost:3000,"
+        "http://localhost:5173,"
+        "http://localhost:5174,"
+        "https://monsoon-preparedness-app-s6kv.vercel.app"
+    )
 
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
@@ -28,7 +34,14 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins(self) -> list[str]:
-        return [origin.strip() for origin in self.backend_cors_origins.split(",") if origin.strip()]
+        raw = self.backend_cors_origins.strip()
+        if raw.startswith("["):
+            try:
+                origins = json.loads(raw)
+                return [str(origin).rstrip("/") for origin in origins if str(origin).strip()]
+            except json.JSONDecodeError:
+                pass
+        return [origin.strip().rstrip("/") for origin in raw.split(",") if origin.strip()]
 
 
 @lru_cache

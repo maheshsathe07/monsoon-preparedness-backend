@@ -40,6 +40,12 @@ Use `.env.template` as the shape. Put real keys in `.env` only. `.env` is ignore
 
 For Supabase writes from this backend, prefer a server-side service role key in `SUPABASE_SERVICE_ROLE_KEY`. Keep it only in Railway/Vercel environment variables or a local `.env`.
 
+For the deployed frontend, set this in Railway:
+
+```env
+BACKEND_CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:5174,https://monsoon-preparedness-app-s6kv.vercel.app
+```
+
 ## Deployment
 
 Railway:
