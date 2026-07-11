@@ -6,16 +6,19 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+REQUIRED_CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "https://monsoon-preparedness-app-s6kv.vercel.app",
+]
+
+
 class Settings(BaseSettings):
     app_name: str = "Monsoon Preparedness API"
     app_env: str = "development"
     api_v1_prefix: str = "/api/v1"
-    backend_cors_origins: str = (
-        "http://localhost:3000,"
-        "http://localhost:5173,"
-        "http://localhost:5174,"
-        "https://monsoon-preparedness-app-s6kv.vercel.app"
-    )
+    backend_cors_origins: str = ",".join(REQUIRED_CORS_ORIGINS)
 
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
@@ -35,13 +38,18 @@ class Settings(BaseSettings):
     @property
     def cors_origins(self) -> list[str]:
         raw = self.backend_cors_origins.strip()
+        configured: list[str]
         if raw.startswith("["):
             try:
                 origins = json.loads(raw)
-                return [str(origin).rstrip("/") for origin in origins if str(origin).strip()]
+                configured = [str(origin).strip().rstrip("/") for origin in origins if str(origin).strip()]
             except json.JSONDecodeError:
-                pass
-        return [origin.strip().rstrip("/") for origin in raw.split(",") if origin.strip()]
+                configured = []
+        else:
+            configured = [origin.strip().rstrip("/") for origin in raw.split(",") if origin.strip()]
+
+        merged = [*configured, *REQUIRED_CORS_ORIGINS]
+        return list(dict.fromkeys(origin.rstrip("/") for origin in merged))
 
 
 @lru_cache
